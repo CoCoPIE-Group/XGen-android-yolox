@@ -14,8 +14,8 @@
 
 #include "yolox.h"
 
-#include <opencv2/core/core.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
+//#include <opencv2/core/core.hpp>
+//#include <opencv2/imgproc/imgproc.hpp>
 
 #include "cpu.h"
 
@@ -71,6 +71,7 @@ public:
 DEFINE_LAYER_CREATOR(YoloV5Focus)
 
 
+
 struct GridAndStride
 {
     int grid0;
@@ -78,11 +79,28 @@ struct GridAndStride
     int stride;
 };
 
+//static inline float intersection_area(const Object& a, const Object& b)
+//{
+//    cv::Rect_<float> inter = a.rect & b.rect;
+//    return inter.area();
+//}
+
 static inline float intersection_area(const Object& a, const Object& b)
 {
-    cv::Rect_<float> inter = a.rect & b.rect;
-    return inter.area();
+    float l = std::max(a.rect.x, b.rect.x);
+    float t = std::max(a.rect.y, b.rect.y);
+    float r = std::min(a.rect.x + a.rect.width, b.rect.x + b.rect.width);
+    float bb = std::min(a.rect.y + a.rect.height, b.rect.y + b.rect.height);
+
+//    cv::Rect_<float> inter = a.rect & b.rect;
+//    float ori = inter.area();
+//    float our = (r - l) * (bb - t);
+//
+//    __android_log_print(ANDROID_LOG_DEBUG, "inter", "%f, %f", ori, our);
+
+    return (r - l) * (bb - t);
 }
+
 
 static void qsort_descent_inplace(std::vector<Object>& faceobjects, int left, int right)
 {
@@ -316,11 +334,11 @@ int Yolox::load(AAssetManager* mgr, const char* modeltype, int _target_size, con
 }
 
 
-int Yolox::detect(const cv::Mat& rgb, std::vector<Object>& objects, float prob_threshold, float nms_threshold)
+int Yolox::detect(unsigned char* rgb, int img_w, int img_h, std::vector<Object>& objects, float prob_threshold, float nms_threshold)
 {
-
-    int img_w = rgb.cols;
-    int img_h = rgb.rows;
+//    cv::Mat rgb(img_h, img_w, CV_8UC3, rgb0);
+//    int img_w = rgb.cols;
+//    int img_h = rgb.rows;
 
     // letterbox pad to multiple of 32
     int w = img_w;
@@ -339,7 +357,7 @@ int Yolox::detect(const cv::Mat& rgb, std::vector<Object>& objects, float prob_t
         w = w * scale;
     }
 
-    ncnn::Mat in = ncnn::Mat::from_pixels_resize(rgb.data, ncnn::Mat::PIXEL_RGB, img_w, img_h, w, h);
+    ncnn::Mat in = ncnn::Mat::from_pixels_resize(rgb, ncnn::Mat::PIXEL_RGB, img_w, img_h, w, h);
 
     // pad to target_size rectangle
     // yolov5/utils/datasets.py letterbox
@@ -403,8 +421,9 @@ int Yolox::detect(const cv::Mat& rgb, std::vector<Object>& objects, float prob_t
     return 0;
 }
 
-int Yolox::draw(cv::Mat& rgb, const std::vector<Object>& objects)
+int Yolox::draw(unsigned char* rgb0, int src_w, int src_h, const std::vector<Object>& objects)
 {
+//    cv::Mat rgb(src_h, src_w, CV_8UC3, rgb0);
     static const char* class_names[] = {
             "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
             "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse", "sheep", "cow",
@@ -447,29 +466,30 @@ int Yolox::draw(cv::Mat& rgb, const std::vector<Object>& objects)
         const unsigned char* color = colors[color_index % 19];
         color_index++;
 
-        cv::Scalar cc(color[0], color[1], color[2]);
-
-        cv::rectangle(rgb,obj.rect, cc, 2);
+//        cv::Scalar cc(color[0], color[1], color[2]);
+//
+//        cv::Rect_<float> rect_(obj.rect.x, obj.rect.y, obj.rect.width,obj.rect.height);
+//        cv::rectangle(rgb,rect_, cc, 2);
 
         char text[256];
         sprintf(text, "%s %.1f%%", class_names[obj.label], obj.prob * 100);
 
         int baseLine = 0;
-        cv::Size label_size = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
+//        cv::Size label_size = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
 
-        int x = obj.rect.x;
-        int y = obj.rect.y - label_size.height - baseLine;
-        if (y < 0)
-            y = 0;
-        if (x + label_size.width > rgb.cols)
-            x = rgb.cols - label_size.width;
+//        int x = obj.rect.x;
+//        int y = obj.rect.y - label_size.height - baseLine;
+//        if (y < 0)
+//            y = 0;
+//        if (x + label_size.width > rgb.cols)
+//            x = rgb.cols - label_size.width;
 
-        cv::rectangle(rgb, cv::Rect(cv::Point(x, y), cv::Size(label_size.width, label_size.height + baseLine)), cc, -1);
+//        cv::rectangle(rgb, cv::Rect(cv::Point(x, y), cv::Size(label_size.width, label_size.height + baseLine)), cc, -1);
 
-        cv::Scalar textcc = (color[0] + color[1] + color[2] >= 381) ? cv::Scalar(0, 0, 0) : cv::Scalar(255, 255, 255);
+//        cv::Scalar textcc = (color[0] + color[1] + color[2] >= 381) ? cv::Scalar(0, 0, 0) : cv::Scalar(255, 255, 255);
 
-        cv::putText(rgb, text, cv::Point(x, y + label_size.height), cv::FONT_HERSHEY_SIMPLEX, 0.5, textcc, 1);
-
+//        cv::putText(rgb, text, cv::Point(x, y + label_size.height), cv::FONT_HERSHEY_SIMPLEX, 0.5, textcc, 1);
+        __android_log_print(ANDROID_LOG_DEBUG, "results", "%s, [%f %f %f %f]", text, obj.rect.x, obj.rect.y, obj.rect.width,obj.rect.height);
     }
     
     

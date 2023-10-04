@@ -18,7 +18,7 @@
 
 #include <android/log.h>
 
-#include <opencv2/core/core.hpp>
+//#include <opencv2/core/core.hpp>
 
 #include "mat.h"
 
@@ -372,51 +372,52 @@ void NdkCamera::close()
     }
 }
 
-void NdkCamera::on_image(const cv::Mat& rgb) const
-{
-}
+//void NdkCamera::on_image(const cv::Mat& rgb) const
+//{
+//}
 
 void NdkCamera::on_image(const unsigned char* nv21, int nv21_width, int nv21_height) const
 {
-    // rotate nv21
-    int w = 0;
-    int h = 0;
-    int rotate_type = 0;
-    {
-        if (camera_orientation == 0)
-        {
-            w = nv21_width;
-            h = nv21_height;
-            rotate_type = camera_facing == 0 ? 2 : 1;
-        }
-        if (camera_orientation == 90)
-        {
-            w = nv21_height;
-            h = nv21_width;
-            rotate_type = camera_facing == 0 ? 5 : 6;
-        }
-        if (camera_orientation == 180)
-        {
-            w = nv21_width;
-            h = nv21_height;
-            rotate_type = camera_facing == 0 ? 4 : 3;
-        }
-        if (camera_orientation == 270)
-        {
-            w = nv21_height;
-            h = nv21_width;
-            rotate_type = camera_facing == 0 ? 7 : 8;
-        }
-    }
-
-    cv::Mat nv21_rotated(h + h / 2, w, CV_8UC1);
-    ncnn::kanna_rotate_yuv420sp(nv21, nv21_width, nv21_height, nv21_rotated.data, w, h, rotate_type);
-
-    // nv21_rotated to rgb
-    cv::Mat rgb(h, w, CV_8UC3);
-    ncnn::yuv420sp2rgb(nv21_rotated.data, w, h, rgb.data);
-
-    on_image(rgb);
+    return;
+//    // rotate nv21
+//    int w = 0;
+//    int h = 0;
+//    int rotate_type = 0;
+//    {
+//        if (camera_orientation == 0)
+//        {
+//            w = nv21_width;
+//            h = nv21_height;
+//            rotate_type = camera_facing == 0 ? 2 : 1;
+//        }
+//        if (camera_orientation == 90)
+//        {
+//            w = nv21_height;
+//            h = nv21_width;
+//            rotate_type = camera_facing == 0 ? 5 : 6;
+//        }
+//        if (camera_orientation == 180)
+//        {
+//            w = nv21_width;
+//            h = nv21_height;
+//            rotate_type = camera_facing == 0 ? 4 : 3;
+//        }
+//        if (camera_orientation == 270)
+//        {
+//            w = nv21_height;
+//            h = nv21_width;
+//            rotate_type = camera_facing == 0 ? 7 : 8;
+//        }
+//    }
+//
+//    cv::Mat nv21_rotated(h + h / 2, w, CV_8UC1);
+//    ncnn::kanna_rotate_yuv420sp(nv21, nv21_width, nv21_height, nv21_rotated.data, w, h, rotate_type);
+//
+//    // nv21_rotated to rgb
+//    cv::Mat rgb(h, w, CV_8UC3);
+//    ncnn::yuv420sp2rgb(nv21_rotated.data, w, h, rgb.data);
+//
+//    on_image(rgb);
 }
 
 static const int NDKCAMERAWINDOW_ID = 233;
@@ -467,7 +468,7 @@ void NdkCameraWindow::set_window(ANativeWindow* _win)
     ANativeWindow_acquire(win);
 }
 
-void NdkCameraWindow::on_image_render(cv::Mat& rgb) const
+void NdkCameraWindow::on_image_render(unsigned char* rgb, int src_w, int src_h) const
 {
 }
 
@@ -704,26 +705,41 @@ void NdkCameraWindow::on_image(const unsigned char* nv21, int nv21_width, int nv
     }
 
     // crop and rotate nv21
-    cv::Mat nv21_croprotated(roi_h + roi_h / 2, roi_w, CV_8UC1);
+//    cv::Mat nv21_croprotated(roi_h + roi_h / 2, roi_w, CV_8UC1);
+//    char *padded_in = reinterpret_cast<char *>(memalign(64, input_size));
+    unsigned char* nv21_croprotated = reinterpret_cast<unsigned char *>(memalign(64, (roi_h + roi_h / 2) * roi_w));
     {
         const unsigned char* srcY = nv21 + nv21_roi_y * nv21_width + nv21_roi_x;
-        unsigned char* dstY = nv21_croprotated.data;
+//        unsigned char* dstY = nv21_croprotated.data;
+        unsigned char* dstY = nv21_croprotated;
         ncnn::kanna_rotate_c1(srcY, nv21_roi_w, nv21_roi_h, nv21_width, dstY, roi_w, roi_h, roi_w, rotate_type);
 
         const unsigned char* srcUV = nv21 + nv21_width * nv21_height + nv21_roi_y * nv21_width / 2 + nv21_roi_x;
-        unsigned char* dstUV = nv21_croprotated.data + roi_w * roi_h;
+//        unsigned char* dstUV = nv21_croprotated.data + roi_w * roi_h;
+        unsigned char* dstUV = nv21_croprotated + roi_w * roi_h;
         ncnn::kanna_rotate_c2(srcUV, nv21_roi_w / 2, nv21_roi_h / 2, nv21_width, dstUV, roi_w / 2, roi_h / 2, roi_w, rotate_type);
     }
 
     // nv21_croprotated to rgb
-    cv::Mat rgb(roi_h, roi_w, CV_8UC3);
-    ncnn::yuv420sp2rgb(nv21_croprotated.data, roi_w, roi_h, rgb.data);
+//    cv::Mat rgb(roi_h, roi_w, CV_8UC3);
+//    ncnn::yuv420sp2rgb(nv21_croprotated.data, roi_w, roi_h, rgb.data);
+    unsigned char* rgb = reinterpret_cast<unsigned char *>(memalign(64, roi_h*roi_w*3));
 
-    on_image_render(rgb);
+//    ncnn::yuv420sp2rgb(nv21_croprotated, roi_w, roi_h, rgb.data);
+    ncnn::yuv420sp2rgb(nv21_croprotated, roi_w, roi_h, rgb);
+
+    //to remove
+//    cv::Mat rgb(roi_h, roi_w, CV_8UC3, rgb0);
+//    on_image_render(rgb);
+    on_image_render(rgb, roi_w, roi_h);
+
+//    const unsigned char* rgb_ptr = rgb.ptr<const unsigned char>(0);
 
     // rotate to native window orientation
-    cv::Mat rgb_render(render_h, render_w, CV_8UC3);
-    ncnn::kanna_rotate_c3(rgb.data, roi_w, roi_h, rgb_render.data, render_w, render_h, render_rotate_type);
+//    cv::Mat rgb_render(render_h, render_w, CV_8UC3);
+    unsigned char* rgb_render = reinterpret_cast<unsigned char *>(memalign(64, render_h*render_w*3));
+//    ncnn::kanna_rotate_c3(rgb.data, roi_w, roi_h, rgb_render.data, render_w, render_h, render_rotate_type);
+    ncnn::kanna_rotate_c3(rgb, roi_w, roi_h, rgb_render, render_w, render_h, render_rotate_type);
 
     ANativeWindow_setBuffersGeometry(win, render_w, render_h, AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM);
 
@@ -735,7 +751,8 @@ void NdkCameraWindow::on_image(const unsigned char* nv21, int nv21_width, int nv
     {
         for (int y = 0; y < render_h; y++)
         {
-            const unsigned char* ptr = rgb_render.ptr<const unsigned char>(y);
+//            const unsigned char* ptr = rgb_render.ptr<const unsigned char>(y);
+            const unsigned char* ptr = rgb_render+y*render_w*3;
             unsigned char* outptr = (unsigned char*)buf.bits + buf.stride * 4 * y;
 
             int x = 0;

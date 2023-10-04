@@ -23,7 +23,8 @@
 #include <camera/NdkCameraMetadata.h>
 #include <media/NdkImageReader.h>
 
-#include <opencv2/core/core.hpp>
+//#include <opencv2/core/core.hpp>
+
 
 class NdkCamera
 {
@@ -35,7 +36,7 @@ public:
     int open(int camera_facing = 0);
     void close();
 
-    virtual void on_image(const cv::Mat& rgb) const;
+//    virtual void on_image(const cv::Mat& rgb) const;
 
     virtual void on_image(const unsigned char* nv21, int nv21_width, int nv21_height) const;
 
@@ -63,7 +64,8 @@ public:
 
     void set_window(ANativeWindow* win);
 
-    virtual void on_image_render(cv::Mat& rgb) const;
+//    virtual void on_image_render(cv::Mat& rgb) const;
+    virtual void on_image_render(unsigned char* rgb, int src_w, int src_h) const;
 
     virtual void on_image(const unsigned char* nv21, int nv21_width, int nv21_height) const;
 

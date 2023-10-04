@@ -15,16 +15,30 @@
 #ifndef YOLOX_H
 #define YOLOX_H
 
-#include <opencv2/core/core.hpp>
+//#include <opencv2/core/core.hpp>
 
 #include <net.h>
 
+template <typename T>
+struct Rect
+{
+    T x;
+    T y;
+    T width;
+    T height;
+
+    T area() const {
+        return width * height;
+    }
+};
+
 struct Object
 {
-    cv::Rect_<float> rect;
+//    cv::Rect_<float> rect;
+    Rect<float> rect;
     int label;
     float prob;
-   
+
 };
 
 
@@ -37,9 +51,9 @@ public:
 
     int load(AAssetManager* mgr, const char* modeltype, int target_size, const float* mean_vals, const float* norm_vals, bool use_gpu = false);
 
-    int detect(const cv::Mat& rgb, std::vector<Object>& objects, float prob_threshold = 0.45f, float nms_threshold = 0.65f);
+    int detect(unsigned char* rgb, int src_w, int src_h, std::vector<Object>& objects, float prob_threshold = 0.45f, float nms_threshold = 0.65f);
 
-    int draw(cv::Mat& rgb, const std::vector<Object>& objects);
+    int draw(unsigned char* rgb, int src_w, int src_h, const std::vector<Object>& objects);
 
 private:
 
