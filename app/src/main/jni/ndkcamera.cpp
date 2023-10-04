@@ -708,15 +708,16 @@ void NdkCameraWindow::on_image(const unsigned char* nv21, int nv21_width, int nv
 //    cv::Mat nv21_croprotated(roi_h + roi_h / 2, roi_w, CV_8UC1);
 //    char *padded_in = reinterpret_cast<char *>(memalign(64, input_size));
     unsigned char* nv21_croprotated = reinterpret_cast<unsigned char *>(memalign(64, (roi_h + roi_h / 2) * roi_w));
+    auto nv21_croprotated_ =std::shared_ptr<unsigned char>(nv21_croprotated, std::default_delete<unsigned char[]>());
     {
         const unsigned char* srcY = nv21 + nv21_roi_y * nv21_width + nv21_roi_x;
 //        unsigned char* dstY = nv21_croprotated.data;
-        unsigned char* dstY = nv21_croprotated;
+        unsigned char* dstY = nv21_croprotated_.get();
         ncnn::kanna_rotate_c1(srcY, nv21_roi_w, nv21_roi_h, nv21_width, dstY, roi_w, roi_h, roi_w, rotate_type);
 
         const unsigned char* srcUV = nv21 + nv21_width * nv21_height + nv21_roi_y * nv21_width / 2 + nv21_roi_x;
 //        unsigned char* dstUV = nv21_croprotated.data + roi_w * roi_h;
-        unsigned char* dstUV = nv21_croprotated + roi_w * roi_h;
+        unsigned char* dstUV = nv21_croprotated_.get() + roi_w * roi_h;
         ncnn::kanna_rotate_c2(srcUV, nv21_roi_w / 2, nv21_roi_h / 2, nv21_width, dstUV, roi_w / 2, roi_h / 2, roi_w, rotate_type);
     }
 
@@ -724,22 +725,25 @@ void NdkCameraWindow::on_image(const unsigned char* nv21, int nv21_width, int nv
 //    cv::Mat rgb(roi_h, roi_w, CV_8UC3);
 //    ncnn::yuv420sp2rgb(nv21_croprotated.data, roi_w, roi_h, rgb.data);
     unsigned char* rgb = reinterpret_cast<unsigned char *>(memalign(64, roi_h*roi_w*3));
+    auto rgb_ =std::shared_ptr<unsigned char>(rgb, std::default_delete<unsigned char[]>());
 
 //    ncnn::yuv420sp2rgb(nv21_croprotated, roi_w, roi_h, rgb.data);
-    ncnn::yuv420sp2rgb(nv21_croprotated, roi_w, roi_h, rgb);
+    ncnn::yuv420sp2rgb(nv21_croprotated_.get(), roi_w, roi_h, rgb_.get());
 
     //to remove
 //    cv::Mat rgb(roi_h, roi_w, CV_8UC3, rgb0);
 //    on_image_render(rgb);
-    on_image_render(rgb, roi_w, roi_h);
+    on_image_render(rgb_.get(), roi_w, roi_h);
 
 //    const unsigned char* rgb_ptr = rgb.ptr<const unsigned char>(0);
 
     // rotate to native window orientation
 //    cv::Mat rgb_render(render_h, render_w, CV_8UC3);
     unsigned char* rgb_render = reinterpret_cast<unsigned char *>(memalign(64, render_h*render_w*3));
+    auto rgb_render_ = std::shared_ptr<unsigned char>(rgb_render, std::default_delete<unsigned char[]>());
+
 //    ncnn::kanna_rotate_c3(rgb.data, roi_w, roi_h, rgb_render.data, render_w, render_h, render_rotate_type);
-    ncnn::kanna_rotate_c3(rgb, roi_w, roi_h, rgb_render, render_w, render_h, render_rotate_type);
+    ncnn::kanna_rotate_c3(rgb_.get(), roi_w, roi_h, rgb_render_.get(), render_w, render_h, render_rotate_type);
 
     ANativeWindow_setBuffersGeometry(win, render_w, render_h, AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM);
 
@@ -752,7 +756,7 @@ void NdkCameraWindow::on_image(const unsigned char* nv21, int nv21_width, int nv
         for (int y = 0; y < render_h; y++)
         {
 //            const unsigned char* ptr = rgb_render.ptr<const unsigned char>(y);
-            const unsigned char* ptr = rgb_render+y*render_w*3;
+            const unsigned char* ptr = rgb_render_.get()+y*render_w*3;
             unsigned char* outptr = (unsigned char*)buf.bits + buf.stride * 4 * y;
 
             int x = 0;

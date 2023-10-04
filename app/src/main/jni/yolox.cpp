@@ -19,7 +19,7 @@
 
 #include "cpu.h"
 
-
+//#include <fstream>
 
 // YOLOX use the same focus in yolov5
 class YoloV5Focus : public ncnn::Layer
@@ -340,6 +340,14 @@ int Yolox::detect(unsigned char* rgb, int img_w, int img_h, std::vector<Object>&
 //    int img_w = rgb.cols;
 //    int img_h = rgb.rows;
 
+//    std::string location = "/data/local/tmp/imgs/img.bin";
+//    std::ofstream out_file(location, std::ios::binary);
+//    cv::Mat imgconv;
+//    rgb.convertTo(imgconv, CV_32S);
+//    out_file.write(imgconv.ptr<char>(0), rgb.cols*rgb.rows*3*4);
+//    out_file.flush();
+//    out_file.close();
+
     // letterbox pad to multiple of 32
     int w = img_w;
     int h = img_h;
@@ -370,8 +378,13 @@ int Yolox::detect(unsigned char* rgb, int img_w, int img_h, std::vector<Object>&
     // new release of yolox has deleted this preprocess,if you are using new release please don't use this preprocess.
     in_pad.substract_mean_normalize(mean_vals, norm_vals);
 
-    ncnn::Extractor ex = yolox.create_extractor();
 
+//    std::string location_inp = "/data/local/tmp/imgs/inp.bin";
+//    std::ofstream out_file_inp(location_inp, std::ios::binary);
+//    out_file_inp.write(static_cast<char *>(in_pad.data), in_pad.w * in_pad.h * in_pad.c * 4);
+
+    ncnn::Extractor ex = yolox.create_extractor();
+    __android_log_print(ANDROID_LOG_DEBUG, "shape", "input: [%d %d]", in_pad.w, in_pad.h);
     ex.input("images", in_pad);
 
     std::vector<Object> proposals;
@@ -379,7 +392,7 @@ int Yolox::detect(unsigned char* rgb, int img_w, int img_h, std::vector<Object>&
     {
         ncnn::Mat out;
         ex.extract("output", out);
-
+        __android_log_print(ANDROID_LOG_DEBUG, "shape", "output [%d %d]", out.w, out.h);
         std::vector<int> strides = {8, 16, 32}; // might have stride=64
         std::vector<GridAndStride> grid_strides;
         generate_grids_and_stride(in_pad.w, in_pad.h, strides, grid_strides);
@@ -490,6 +503,14 @@ int Yolox::draw(unsigned char* rgb0, int src_w, int src_h, const std::vector<Obj
 
 //        cv::putText(rgb, text, cv::Point(x, y + label_size.height), cv::FONT_HERSHEY_SIMPLEX, 0.5, textcc, 1);
         __android_log_print(ANDROID_LOG_DEBUG, "results", "%s, [%f %f %f %f]", text, obj.rect.x, obj.rect.y, obj.rect.width,obj.rect.height);
+//
+//        std::string location = "/data/local/tmp/imgs/out.bin";
+//        std::ofstream out_file(location, std::ios::binary);
+//        cv::Mat imgconv;
+//        rgb.convertTo(imgconv, CV_32S);
+//        out_file.write(imgconv.ptr<char>(0), rgb.cols*rgb.rows*3*4);
+//        out_file.flush();
+//        out_file.close();
     }
     
     
