@@ -30,6 +30,10 @@ android {
         }
     }
 
+    packagingOptions {
+        pickFirst "**/libxgen.so"
+    }
+
     dependencies {
         implementation 'com.android.support:support-v4:24.0.0'
     }

@@ -18,6 +18,7 @@
 //#include <opencv2/core/core.hpp>
 
 #include <net.h>
+#include "xgen.h"
 
 template <typename T>
 struct Rect
@@ -47,7 +48,7 @@ class Yolox
 public:
     Yolox();
 
-    int load(const char* modeltype, int target_size, const float* mean_vals, const float* norm_vals, bool use_gpu = false);
+//    int load(const char* modeltype, int target_size, const float* mean_vals, const float* norm_vals, bool use_gpu = false);
 
     int load(AAssetManager* mgr, const char* modeltype, int target_size, const float* mean_vals, const float* norm_vals, bool use_gpu = false);
 
@@ -57,6 +58,7 @@ public:
 
 private:
 
+    XGenHandle *h;
     ncnn::Net yolox;
 
     int target_size;

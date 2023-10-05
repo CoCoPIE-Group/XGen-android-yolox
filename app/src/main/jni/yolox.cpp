@@ -18,6 +18,9 @@
 //#include <opencv2/imgproc/imgproc.hpp>
 
 #include "cpu.h"
+#include "xgen_data.h"
+#include "xgen_pb.h"
+
 
 //#include <fstream>
 
@@ -257,43 +260,43 @@ Yolox::Yolox()
     workspace_pool_allocator.set_size_compare_ratio(0.f);
 }
 
-int Yolox::load(const char* modeltype, int _target_size, const float* _mean_vals, const float* _norm_vals, bool use_gpu)
-{
-    yolox.clear();
-    blob_pool_allocator.clear();
-    workspace_pool_allocator.clear();
-
-    ncnn::set_cpu_powersave(2);
-    ncnn::set_omp_num_threads(ncnn::get_big_cpu_count());
-
-    yolox.opt = ncnn::Option();
-
-#if NCNN_VULKAN
-    yolox.opt.use_vulkan_compute = use_gpu;
-#endif
-    yolox.register_custom_layer("YoloV5Focus", YoloV5Focus_layer_creator);
-    yolox.opt.num_threads = ncnn::get_big_cpu_count();
-    yolox.opt.blob_allocator = &blob_pool_allocator;
-    yolox.opt.workspace_allocator = &workspace_pool_allocator;
-
-    char parampath[256];
-    char modelpath[256];
-    sprintf(parampath, "%s.param", modeltype);
-    sprintf(modelpath, "%s.bin", modeltype);
-
-    yolox.load_param(parampath);
-    yolox.load_model(modelpath);
-
-    target_size = _target_size;
-    mean_vals[0] = _mean_vals[0];
-    mean_vals[1] = _mean_vals[1];
-    mean_vals[2] = _mean_vals[2];
-    norm_vals[0] = _norm_vals[0];
-    norm_vals[1] = _norm_vals[1];
-    norm_vals[2] = _norm_vals[2];
-
-    return 0;
-}
+//int Yolox::load(const char* modeltype, int _target_size, const float* _mean_vals, const float* _norm_vals, bool use_gpu)
+//{
+//    yolox.clear();
+//    blob_pool_allocator.clear();
+//    workspace_pool_allocator.clear();
+//
+//    ncnn::set_cpu_powersave(2);
+//    ncnn::set_omp_num_threads(ncnn::get_big_cpu_count());
+//
+//    yolox.opt = ncnn::Option();
+//
+//#if NCNN_VULKAN
+//    yolox.opt.use_vulkan_compute = use_gpu;
+//#endif
+//    yolox.register_custom_layer("YoloV5Focus", YoloV5Focus_layer_creator);
+//    yolox.opt.num_threads = ncnn::get_big_cpu_count();
+//    yolox.opt.blob_allocator = &blob_pool_allocator;
+//    yolox.opt.workspace_allocator = &workspace_pool_allocator;
+//
+//    char parampath[256];
+//    char modelpath[256];
+//    sprintf(parampath, "%s.param", modeltype);
+//    sprintf(modelpath, "%s.bin", modeltype);
+//
+//    yolox.load_param(parampath);
+//    yolox.load_model(modelpath);
+//
+//    target_size = _target_size;
+//    mean_vals[0] = _mean_vals[0];
+//    mean_vals[1] = _mean_vals[1];
+//    mean_vals[2] = _mean_vals[2];
+//    norm_vals[0] = _norm_vals[0];
+//    norm_vals[1] = _norm_vals[1];
+//    norm_vals[2] = _norm_vals[2];
+//
+//    return 0;
+//}
 
 int Yolox::load(AAssetManager* mgr, const char* modeltype, int _target_size, const float* _mean_vals, const float* _norm_vals, bool use_gpu)
 {
@@ -301,8 +304,11 @@ int Yolox::load(AAssetManager* mgr, const char* modeltype, int _target_size, con
     blob_pool_allocator.clear();
     workspace_pool_allocator.clear();
 
-    ncnn::set_cpu_powersave(2);
-    ncnn::set_omp_num_threads(ncnn::get_big_cpu_count());
+    // Init XGen
+    h = XGenInitWithData(_tmp_xgen_compiler_generated_deepvan_run__1dfdd45a_fb83_4d_pb, _tmp_xgen_compiler_generated_deepvan_run__1dfdd45a_fb83_4d_pb_len, _tmp_xgen_compiler_generated_deepvan_run__1dfdd45a_fb83_4d_data, _tmp_xgen_compiler_generated_deepvan_run__1dfdd45a_fb83_4d_data_len);
+
+//    ncnn::set_cpu_powersave(2);
+//    ncnn::set_omp_num_threads(ncnn::get_big_cpu_count());
 
     yolox.opt = ncnn::Option();
 #if NCNN_VULKAN
@@ -318,8 +324,8 @@ int Yolox::load(AAssetManager* mgr, const char* modeltype, int _target_size, con
     sprintf(parampath, "%s.param", modeltype);
     sprintf(modelpath, "%s.bin", modeltype);
 
-    yolox.load_param(mgr, parampath);
-    yolox.load_model(mgr, modelpath);
+//    yolox.load_param(mgr, parampath);
+//    yolox.load_model(mgr, modelpath);
 
 
     target_size = _target_size;
@@ -369,67 +375,68 @@ int Yolox::detect(unsigned char* rgb, int img_w, int img_h, std::vector<Object>&
 
     // pad to target_size rectangle
     // yolov5/utils/datasets.py letterbox
-    int wpad = (w + 31) / 32 * 32 - w;
-    int hpad = (h + 31) / 32 * 32 - h;
+//    int wpad = (w + 31) / 32 * 32 - w;
+//    int hpad = (h + 31) / 32 * 32 - h;
+    int wpad = 640 - w; // Fixed 640 pixels
+    int hpad = 640 - h; // Fixed 640 pixels
     ncnn::Mat in_pad;
-    ncnn::copy_make_border(in, in_pad, 0, hpad, 0, wpad, ncnn::BORDER_CONSTANT, 114.f);
+    ncnn::copy_make_border(in, in_pad, 0, hpad, 0, wpad, ncnn::BORDER_CONSTANT, 114.f); // FIXME Crash!
 
     // so for 0-255 input image, rgb_mean should multiply 255 and norm should div by std.
     // new release of yolox has deleted this preprocess,if you are using new release please don't use this preprocess.
-    in_pad.substract_mean_normalize(mean_vals, norm_vals);
-
+    in_pad.substract_mean_normalize(mean_vals, norm_vals); // FIXME Crash!
 
 //    std::string location_inp = "/data/local/tmp/imgs/inp.bin";
 //    std::ofstream out_file_inp(location_inp, std::ios::binary);
 //    out_file_inp.write(static_cast<char *>(in_pad.data), in_pad.w * in_pad.h * in_pad.c * 4);
 
-    ncnn::Extractor ex = yolox.create_extractor();
-    __android_log_print(ANDROID_LOG_DEBUG, "shape", "input: [%d %d]", in_pad.w, in_pad.h);
-    ex.input("images", in_pad);
-
-    std::vector<Object> proposals;
-
-    {
-        ncnn::Mat out;
-        ex.extract("output", out);
-        __android_log_print(ANDROID_LOG_DEBUG, "shape", "output [%d %d]", out.w, out.h);
-        std::vector<int> strides = {8, 16, 32}; // might have stride=64
-        std::vector<GridAndStride> grid_strides;
-        generate_grids_and_stride(in_pad.w, in_pad.h, strides, grid_strides);
-        generate_yolox_proposals(grid_strides, out, prob_threshold, proposals);
-    }
-
-    // sort all proposals by score from highest to lowest
-    qsort_descent_inplace(proposals);
-
-    // apply nms with nms_threshold
-    std::vector<int> picked;
-    nms_sorted_bboxes(proposals, picked, nms_threshold);
-
-    int count = picked.size();
-
-    objects.resize(count);
-    for (int i = 0; i < count; i++)
-    {
-        objects[i] = proposals[picked[i]];
-
-        // adjust offset to original unpadded
-        float x0 = (objects[i].rect.x) / scale;
-        float y0 = (objects[i].rect.y) / scale;
-        float x1 = (objects[i].rect.x + objects[i].rect.width) / scale;
-        float y1 = (objects[i].rect.y + objects[i].rect.height) / scale;
-
-        // clip
-        x0 = std::max(std::min(x0, (float)(img_w - 1)), 0.f);
-        y0 = std::max(std::min(y0, (float)(img_h - 1)), 0.f);
-        x1 = std::max(std::min(x1, (float)(img_w - 1)), 0.f);
-        y1 = std::max(std::min(y1, (float)(img_h - 1)), 0.f);
-
-        objects[i].rect.x = x0;
-        objects[i].rect.y = y0;
-        objects[i].rect.width = x1 - x0;
-        objects[i].rect.height = y1 - y0;
-    }
+//    ncnn::Extractor ex = yolox.create_extractor();
+//    __android_log_print(ANDROID_LOG_DEBUG, "shape", "input: [%d %d]", in_pad.w, in_pad.h);
+//    ex.input("images", in_pad);
+//
+//    std::vector<Object> proposals;
+//
+//    {
+//        ncnn::Mat out;
+//        ex.extract("outputs", out);
+//        __android_log_print(ANDROID_LOG_DEBUG, "shape", "output [%d %d]", out.w, out.h);
+//        std::vector<int> strides = {8, 16, 32}; // might have stride=64
+//        std::vector<GridAndStride> grid_strides;
+//        generate_grids_and_stride(in_pad.w, in_pad.h, strides, grid_strides);
+//        generate_yolox_proposals(grid_strides, out, prob_threshold, proposals);
+//    }
+//
+//    // sort all proposals by score from highest to lowest
+//    qsort_descent_inplace(proposals);
+//
+//    // apply nms with nms_threshold
+//    std::vector<int> picked;
+//    nms_sorted_bboxes(proposals, picked, nms_threshold);
+//
+//    int count = picked.size();
+//
+//    objects.resize(count);
+//    for (int i = 0; i < count; i++)
+//    {
+//        objects[i] = proposals[picked[i]];
+//
+//        // adjust offset to original unpadded
+//        float x0 = (objects[i].rect.x) / scale;
+//        float y0 = (objects[i].rect.y) / scale;
+//        float x1 = (objects[i].rect.x + objects[i].rect.width) / scale;
+//        float y1 = (objects[i].rect.y + objects[i].rect.height) / scale;
+//
+//        // clip
+//        x0 = std::max(std::min(x0, (float)(img_w - 1)), 0.f);
+//        y0 = std::max(std::min(y0, (float)(img_h - 1)), 0.f);
+//        x1 = std::max(std::min(x1, (float)(img_w - 1)), 0.f);
+//        y1 = std::max(std::min(y1, (float)(img_h - 1)), 0.f);
+//
+//        objects[i].rect.x = x0;
+//        objects[i].rect.y = y0;
+//        objects[i].rect.width = x1 - x0;
+//        objects[i].rect.height = y1 - y0;
+//    }
 
     return 0;
 }
@@ -502,7 +509,7 @@ int Yolox::draw(unsigned char* rgb0, int src_w, int src_h, const std::vector<Obj
 //        cv::Scalar textcc = (color[0] + color[1] + color[2] >= 381) ? cv::Scalar(0, 0, 0) : cv::Scalar(255, 255, 255);
 
 //        cv::putText(rgb, text, cv::Point(x, y + label_size.height), cv::FONT_HERSHEY_SIMPLEX, 0.5, textcc, 1);
-        __android_log_print(ANDROID_LOG_DEBUG, "results", "%s, [%f %f %f %f]", text, obj.rect.x, obj.rect.y, obj.rect.width,obj.rect.height);
+        __android_log_print(ANDROID_LOG_DEBUG, "ncnn", "results %s, [%f %f %f %f]", text, obj.rect.x, obj.rect.y, obj.rect.width, obj.rect.height);
 //
 //        std::string location = "/data/local/tmp/imgs/out.bin";
 //        std::ofstream out_file(location, std::ios::binary);
